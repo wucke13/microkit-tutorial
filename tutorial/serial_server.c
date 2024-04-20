@@ -59,4 +59,17 @@ void init(void) {
     uart_put_str("SERIAL SERVER: starting\n");
 }
 
-void notified(microkit_channel channel) {}
+void notified(microkit_channel channel) {
+    switch (channel) {
+        case 0:
+            char byte = uart_get_char();
+            uart_handle_irq();
+            uart_put_char(byte);
+        break;
+        default:
+            printf("received notification on unknown channel: %d\n", channel);
+        break;
+    }
+
+    microkit_irq_ack(channel);
+}
