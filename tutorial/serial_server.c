@@ -65,11 +65,10 @@ void notified(microkit_channel channel) {
             char byte = uart_get_char();
             uart_handle_irq();
             uart_put_char(byte);
+            microkit_irq_ack(channel);
         break;
         default:
             printf("received notification on unknown channel: %d\n", channel);
         break;
     }
-
-    microkit_irq_ack(channel);
 }
