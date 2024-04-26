@@ -2,11 +2,31 @@
 <system>
     <memory_region name="uart_0" size="0x1000" phys_addr="0x9000000" />
 
-    <protection_domain name="serial_server">
+    <memory_region name="serial_input_buffer" size="0x1000" />
+    <memory_region name="serial_output_buffer" size="0x1000" />
+
+    <channel>
+        <end pd="serial_server" id="1" />
+        <end pd="client" id="1" />
+    </channel>
+    <channel>
+        <end pd="serial_server" id="2" />
+        <end pd="client" id="2" />
+    </channel>
+
+    <protection_domain name="serial_server" priority="100">
         <program_image path="serial_server.elf" />
         <map mr="uart_0" vaddr="0x4000000" perms="rw" cached="false"
             setvar_vaddr="uart_base_vaddr" />
         <irq id="0" irq="33" />
+        <map mr="serial_input_buffer" vaddr="0x4001000" perms="rw" setvar_vaddr="to_client" />
+        <map mr="serial_output_buffer" vaddr="0x4002000" perms="r" setvar_vaddr="from_client" />
+    </protection_domain>
+
+    <protection_domain name="client" priority="0">
+        <program_image path="client.elf" />
+        <map mr="serial_output_buffer" vaddr="0x4000000" perms="rw" setvar_vaddr="to_serial_server" />
+        <map mr="serial_input_buffer" vaddr="0x4001000" perms="r" setvar_vaddr="from_serial_server" />
     </protection_domain>
 
 </system>

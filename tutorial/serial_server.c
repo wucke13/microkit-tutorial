@@ -5,6 +5,9 @@
 // This variable will have the address of the UART device
 uintptr_t uart_base_vaddr;
 
+volatile uint8_t* to_client;
+volatile uint8_t* from_client;
+
 #define RHR_MASK 0b111111111
 #define UARTDR 0x000
 #define UARTFR 0x018
@@ -61,14 +64,22 @@ void init(void) {
 
 void notified(microkit_channel channel) {
     switch (channel) {
-        case 0:
-            char byte = uart_get_char();
+        case 0: // serial port yields new byte
+            // received a byte, send it to the client
+            to_client[0] = uart_get_char();
             uart_handle_irq();
-            uart_put_char(byte);
+
+            // tell seL4 that the IRQ was processed
             microkit_irq_ack(channel);
+
+            // notify client
+            microkit_notify(1);
         break;
-        default:
-            printf("received notification on unknown channel: %d\n", channel);
+        case 1: // client signals that it received its message
+        break;
+        case 2: // client signals that is sent something to here
+            uart_put_str((char*) from_client);
+            microkit_notify(2);
         break;
     }
 }

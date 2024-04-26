@@ -4,6 +4,7 @@ ifndef MICROKIT_SDK
 	MICROKIT_SDK := ../sdk
 endif
 
+SHELL=bash
 # In case the default compiler triple doesn't work for you or your package manager
 # only has aarch64-none-elf or something, you can specifiy the toolchain.
 ifndef TOOLCHAIN

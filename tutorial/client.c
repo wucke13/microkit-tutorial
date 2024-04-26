@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <microkit.h>
+#include <string.h>
 #include "printf.h"
 #include "wordle.h"
 
@@ -8,6 +9,12 @@
 #define CLEAR_TERMINAL_BELOW_CURSOR "\033[0J"
 
 #define INVALID_CHAR (-1)
+
+// only ever contains a single byte
+volatile uint8_t* from_serial_server;
+
+// can hold up to 1024 bytes (1023 usable + one null byte)
+volatile uint8_t* to_serial_server;
 
 struct wordle_char {
     int ch;
@@ -29,7 +36,13 @@ void wordle_server_send() {
 }
 
 void serial_send(char *str) {
-    // Implement this function to get the serial server to print the string.
+    size_t i = 0;
+    for(; str[i] != '\0'; i++)
+        to_serial_server[i] = str[i];
+
+    to_serial_server[i] = '\0';
+
+    microkit_notify(2);
 }
 
 // This function prints a CLI Wordle using pretty colours for what characters
@@ -121,4 +134,20 @@ void init(void) {
     print_table(false);
 }
 
-void notified(microkit_channel channel) {}
+void notified(microkit_channel channel) {
+    switch (channel) {
+        case 1:
+            // read the byte
+            uint8_t char_in = from_serial_server[0];
+
+            // acknowledge the byte was read
+            microkit_notify(1);
+
+            // consume the byte
+            add_char_to_table(char_in);
+            print_table(true);
+        break;
+        case 2:
+        break;
+    }
+}
