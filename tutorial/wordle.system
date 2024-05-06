@@ -13,6 +13,10 @@
         <end pd="serial_server" id="2" />
         <end pd="client" id="2" />
     </channel>
+    <channel>
+        <end pd="client" id="0" />
+        <end pd="wordle_server" id="0" />
+    </channel>
 
     <protection_domain name="serial_server" priority="100">
         <program_image path="serial_server.elf" />
@@ -29,4 +33,7 @@
         <map mr="serial_input_buffer" vaddr="0x4001000" perms="r" setvar_vaddr="from_serial_server" />
     </protection_domain>
 
+    <protection_domain name="wordle_server" pp="true" priority="10">
+        <program_image path="wordle_server.elf" />
+    </protection_domain>
 </system>

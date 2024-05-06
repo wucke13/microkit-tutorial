@@ -33,6 +33,63 @@ void wordle_server_send() {
     // After doing the PPC, the Wordle server should have updated
     // the message-registers containing the state of each character.
     // Look at the message registers and update the `table` accordingly.
+
+
+    // We can combine 8 chars (each one byte in size) per register passed via ppc, as each register
+    // is 64 bits/ 8 bytes in size.
+
+    // count of registers required to submit one word guess
+    uint16_t regs_needed = (WORD_LENGTH + (BYTES_PER_REGISTER - 1)) / BYTES_PER_REGISTER;
+
+    // allocate a new msginfo for our request
+    microkit_msginfo req = microkit_msginfo_new(0, regs_needed);
+
+    // register value to work on
+    uint64_t value = 0;
+
+    // for each char, push it to the message registers
+    for (size_t i = 0; i < WORD_LENGTH; i++){
+        // current character from the word
+        char current_c = table[curr_row][i].ch;
+
+        // shift operation offset
+        uint8_t offset = (i % BYTES_PER_REGISTER ) * BITS_PER_CHAR;
+
+        // punch in the character at the current offset into the register
+        value |= ((uint64_t) current_c) << offset;
+
+        // set current message register to final value
+        if (
+            // if this is the last byte of the message register
+            (i % BYTES_PER_REGISTER == (BYTES_PER_REGISTER - 1))
+            // or if the last byte of the word
+            || (i + 1 == WORD_LENGTH)
+        ){
+            uint8_t mr = i / 8;
+            microkit_mr_set(mr, value);
+            value = 0;
+        }
+    }
+
+    // make the protected procedure call
+    microkit_msginfo resp = microkit_ppcall(0, req);
+
+
+    // read back response
+    for (size_t i = 0; i < WORD_LENGTH; i++){
+        // read next message register
+        if (i % BYTES_PER_REGISTER == 0){
+            uint8_t mr = i / 8;
+            value = microkit_mr_get(mr);
+        }
+
+        // get current state, masking the rest of the message register
+        char current_state = value & 0xff;
+        // set current state
+        table[curr_row][i].state = current_state;
+        // shift out current state, so that in the next loop the next state can be read
+        value >>= BITS_PER_CHAR;
+    }
 }
 
 void serial_send(char *str) {
