@@ -36,4 +36,53 @@
     <protection_domain name="wordle_server" pp="true" priority="10">
         <program_image path="wordle_server.elf" />
     </protection_domain>
+
+
+    <!--
+        This is what the virtual machine will use as its "RAM".
+        Remember it does not know it is a VM and so it will expect a
+        block of contigious memory as RAM.
+    -->
+    <memory_region name="guest_ram" size="0x10000000" page_size="0x200_000"
+        phys_addr="0x40000000" />
+    <!-- Create a memory region for the ethernet device -->
+    <memory_region name="ethernet" size="0x1000" phys_addr="0xa003000" />
+    <!--
+        Create a memory region for the GIC CPU interface. This is a device
+        that is virtualised at the hardware-level, unlike other parts
+        of the GIC.
+    -->
+    <memory_region name="gic_vcpu" size="0x1000" phys_addr="0x8040000" />
+
+    <!-- Create a VMM protection domain -->
+    <protection_domain name="vmm" priority="101">
+        <program_image path="vmm.elf" />
+        <!--
+            Map in the virtual machine's RAM region as the VMM needs
+            access to it as well for starting and setting up the VM.
+        -->
+        <map mr="guest_ram" vaddr="0x40000000" perms="rw"
+            setvar_vaddr="guest_ram_vaddr" />
+        <!--
+            Create the virtual machine, the `id` is used for the
+            VMM to refer to the VM. Similar to channels and IRQs.
+        -->
+        <virtual_machine name="linux" id="0" priority="100">
+            <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
+            <map mr="ethernet" vaddr="0xa003000" perms="rw" cached="false" />
+            <map mr="uart_0" vaddr="0x9000000" perms="rw" cached="false" />
+            <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
+        </virtual_machine>
+        <!--
+            We want the VMM to receive the ethernet interrupts, which it
+            will then deliver to the VM.
+         -->
+        <irq irq="79" id="2" trigger="edge" />
+    </protection_domain>
+
+    <channel>
+        <!-- The VMM code expects the channel ID to be 1. -->
+        <end pd="vmm" id="1" />
+        <end pd="wordle_server" id="2" />
+    </channel>
 </system>

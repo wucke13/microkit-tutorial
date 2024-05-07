@@ -74,6 +74,11 @@ microkit_msginfo protected(microkit_channel ch, microkit_msginfo msginfo){
                 }
             }
         break;
+        case 2:
+            // microkit_msginfo msg = microkit_msginfo_new(0, WORDLE_WORD_SIZE);
+            for (int i = 0; i < WORD_LENGTH; i++)
+                word[i] = microkit_mr_get(i);
+        break;
         default:
             printf("received unknown ppc on channel %d\n", ch);
         break;
